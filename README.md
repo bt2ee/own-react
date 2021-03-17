@@ -51,3 +51,51 @@ ReactDOM.render(element, container)
 > **Let’s remove all the React specific code and replace it with vanilla JavaScript.**
 
 **让我们移除 React 具体代码并且替换为原始 JavaScript**
+
+> On the first line we have the element, defined with JSX. It isn’t even valid JavaScript, so in order to replace it with vanilla JS, first we need to replace it with valid JS.
+> JSX is transformed to JS by build tools like Babel. The transformation is usually simple: replace the code inside the tags with a call to createElement, passing the tag name, the props and the children as parameters.
+
+```
+const element = <h1 title="foo">Hello</h1>
+```
+
+在第一行我们有了 JSX 定义的元素。它甚至不是有效的JavaScript，因此，为了用原始 JavaScript 替代它，首先我们需要用有效的 JS 替代它。
+JSX 通过 Babel 这样的构建工具被转换成 JS。转换通常很简单：调用 createElement 来替换标签内的代码，传递名称，props 和 children 作为参数。
+
+> React.createElement creates an object from its arguments. Besides some validations, that’s all it does. So we can safely replace the function call with its output.
+
+```
+const element = React.createElement(
+  "h1",
+  { title: "foo" },
+  "Hello"
+)
+```
+
+React.createElement 根据参数创建一个对象。除了一些验证外，这就是它全部的工作。因此，我们可以安全地将函数调用替换为其输出。
+
+> And this is what an element is, an object with two properties: type and props (well, it has more, but we only care about these two).
+>
+> The type is a string that specifies the type of the DOM node we want to create, it’s the tagName you pass to document.createElement when you want to create an HTML element. It can also be a function, but we’ll leave that for Step VII.
+>
+> props is another object, it has all the keys and values from the JSX attributes. It also has a special property: children.
+>
+> children in this case is a string, but it’s usually an array with more elements. That’s why elements are also trees.
+
+```
+const element = {
+  type: "h1",
+  props: {
+    title: "foo",
+    children: "Hello",
+  },
+}
+```
+
+这就是一个元素，一个具有两个属性的元素：type 和 props（好吧，它还有[更多属性](https://github.com/facebook/react/blob/f4cc45ce962adc9f307690e1d5cfa28a288418eb/packages/react/src/ReactElement.js#L111)，但是我们只关心这两个）
+
+type 参数是一个 string，用于我们想要创建的 DOM 节点的类型，这是当你想要创建一个 HTML 元素时传递给 document.createElement 的 tagName。它也可以是个函数，我们会在第 VII 讲到。
+
+props 是另一个对象，它具有 JSX 属性中的所有键和值。 它还有一个特殊的属性：children。
+
+在这种情况下，children 是一个字符串，但通常是一个包含更多元素的数组。 这就是为什么元素也是树的原因。
