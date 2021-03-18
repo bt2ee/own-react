@@ -42,7 +42,7 @@
 
 我们将使用 React 应用，仅仅只有三行代码，第一行定义了一个 React 元素。下一行通过 DOM 获取了一个节点。最后一行将 React 节点渲染到容器中
 
-```
+```js
 const element = <h1 title="foo">Hello</h1>
 const container = document.getElementById("root")
 ReactDOM.render(element, container)
@@ -55,7 +55,7 @@ ReactDOM.render(element, container)
 > On the first line we have the element, defined with JSX. It isn’t even valid JavaScript, so in order to replace it with vanilla JS, first we need to replace it with valid JS.
 > JSX is transformed to JS by build tools like Babel. The transformation is usually simple: replace the code inside the tags with a call to createElement, passing the tag name, the props and the children as parameters.
 
-```
+```js
 const element = <h1 title="foo">Hello</h1>
 ```
 
@@ -64,7 +64,7 @@ JSX 通过 Babel 这样的构建工具被转换成 JS。转换通常很简单：
 
 > React.createElement creates an object from its arguments. Besides some validations, that’s all it does. So we can safely replace the function call with its output.
 
-```
+```js
 const element = React.createElement(
   "h1",
   { title: "foo" },
@@ -82,7 +82,7 @@ React.createElement 根据参数创建一个对象。除了一些验证外，这
 >
 > children in this case is a string, but it’s usually an array with more elements. That’s why elements are also trees.
 
-```
+```js
 const element = {
   type: "h1",
   props: {
@@ -104,7 +104,7 @@ props 是另一个对象，它具有 JSX 属性中的所有键和值。 它还�
 >
 > render is where React changes the DOM, so let’s do the updates ourselves.
 
-```
+```js
 ReactDOM.render(element, container)
 ```
 
@@ -122,7 +122,7 @@ ReactDOM.render(element, container)
 
 > 为了避免混淆，我会使用 “element” 来代表 React 元素，用 “node” 代表 DOM 元素。
 
-```
+```js
 const element = {
   type: "h1",
   props: {
@@ -147,7 +147,7 @@ node["title"] = element.props.title
 然后我们为 children 创建节点。我们仅需要一个字符串当作 child 因此我们创建一个文本节点。
 使用 textNode 而不是设置 innerText 使我们以后用同一方式处理所有元素。同时注意，我们如何像设置 h1 标题一样设置 nodeValue ，就像是字符串有了 props：{nodeValue: "hello"}。
 
-```
+```js
 const element = {
   ...
   props: {
@@ -169,7 +169,7 @@ text["nodeValue"] = element.props.children
 
 最终，我们添加 textNode 到 h1 并且添加 h1 到容器中。
 
-```
+```js
 
 ...
 ​
@@ -185,7 +185,7 @@ container.appendChild(node)
 
 现在，我们有了一个和之前一样到应用，但是没有使用 React。
 
-```
+```js
 const element = {
   type: "h1",
   props: {
