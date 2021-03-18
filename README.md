@@ -99,3 +99,109 @@ type 参数是一个 string，用于我们想要创建的 DOM 节点的类型，
 props 是另一个对象，它具有 JSX 属性中的所有键和值。 它还有一个特殊的属性：children。
 
 在这种情况下，children 是一个字符串，但通常是一个包含更多元素的数组。 这就是为什么元素也是树的原因。
+
+> The other piece of React code we need to replace is the call to ReactDOM.render.
+>
+> render is where React changes the DOM, so let’s do the updates ourselves.
+
+```
+ReactDOM.render(element, container)
+```
+
+另一段我们需要替换的 React 代码是 ReactDOM.render 的调用。
+渲染是 React 更改 DOM 的地方，因此我们自己进行更新。
+
+> First we create a node* using the element type, in this case h1.
+>
+> Then we assign all the element props to that node. Here it’s just the title.
+>
+> * To avoid confusion, I’ll use “element” to refer to React elements and “node” for DOM elements.
+
+首先我们使用 type 元素创建一个节点，在本例中的 h1。
+然后我们把所有元素 props 分配给这个节点。在这里就是 title。
+
+> 为了避免混淆，我会使用 “element” 来代表 React 元素，用 “node” 代表 DOM 元素。
+
+```
+const element = {
+  type: "h1",
+  props: {
+    title: "foo",
+    ...
+  },
+}
+​
+...
+​
+const node = document.createElement(element.type)
+node["title"] = element.props.title
+
+...
+
+```
+
+> Then we create the nodes for the children. We only have a string as a child so we create a text node.
+>
+> Using textNode instead of setting innerText will allow us to treat all elements in the same way later. Note also how we set the nodeValue like we did it with the h1 title, it’s almost as if the string had props: {nodeValue: "hello"}.
+
+然后我们为 children 创建节点。我们仅需要一个字符串当作 child 因此我们创建一个文本节点。
+使用 textNode 而不是设置 innerText 使我们以后用同一方式处理所有元素。同时注意，我们如何像设置 h1 标题一样设置 nodeValue ，就像是字符串有了 props：{nodeValue: "hello"}。
+
+```
+const element = {
+  ...
+  props: {
+    title: "foo",
+    children: "Hello",
+  },
+}
+​
+...
+​
+const text = document.createTextNode("")
+text["nodeValue"] = element.props.children
+
+...
+
+```
+
+> Finally, we append the textNode to the h1 and the h1 to the container.
+
+最终，我们添加 textNode 到 h1 并且添加 h1 到容器中。
+
+```
+
+...
+​
+const container = document.getElementById("root")
+
+...
+​
+node.appendChild(text)
+container.appendChild(node)
+```
+
+> And now we have the same app as before, but without using React.
+
+现在，我们有了一个和之前一样到应用，但是没有使用 React。
+
+```
+const element = {
+  type: "h1",
+  props: {
+    title: "foo",
+    children: "Hello",
+  },
+}
+​
+const container = document.getElementById("root")
+​
+const node = document.createElement(element.type)
+node["title"] = element.props.title
+​
+const text = document.createTextNode("")
+text["nodeValue"] = element.props.children
+​
+node.appendChild(text)
+container.appendChild(node)
+```
