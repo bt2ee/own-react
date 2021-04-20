@@ -205,3 +205,180 @@ text["nodeValue"] = element.props.children
 node.appendChild(text)
 container.appendChild(node)
 ```
+
+## 第 1 步：`createElement` 函数
+
+> Let’s start again with another app. This time we’ll replace React code with our own version of React.
+> We’ll start by writing our own createElement.
+> Let’s transform the JSX to JS so we can see the createElement calls.
+
+让我们从另一个应用开始。这次我们将会使用我们自己版本的 React 替换掉 React 代码。
+我们将会从编写我们的自己的 createElement 开始。
+让我们把 JSX 转换成 JS 以便于我们可以看出 createElement 如何调用。
+
+```js
+const element = (
+  <div id="foo">
+    <a>bar</a>
+    <b />
+  </div>
+)
+const container = document.getElementById("root")
+ReactDOM.render(element, container)
+```
+
+> As we saw in the previous step, an element is an object with type and props. The only thing that our function needs to do is create that object.
+
+就像我们看到的前一步，一个元素是一个拥有 type 和 props 的对象。我们函数需要的唯一的事情就是创建一个对象。
+
+```js
+const element = React.createElement(
+  "div",
+  { id: "foo" },
+  React.createElement("a", null, "bar"),
+  React.createElement("b")
+)
+...
+```
+
+> We use the spread operator for the props and the rest parameter syntax for the children, this way the children prop will always be an array.
+> For example, createElement("div") returns:
+> {
+>   "type": "div",
+>   "props": { "children": [] }
+> }
+> createElement("div", null, a) returns:
+> {
+>   "type": "div",
+>   "props": { "children": [a] }
+> }
+> and createElement("div", null, a, b) returns:
+> {
+>  "type": "div",
+>  "props": { "children": [a, b] }
+> }
+
+我们对 props 使用展开操作符并且对 children 使用 rest 参数语法，这样 children prop 将始终是一个数组。
+例如，`createElement("div")` 返回：
+
+```js
+{
+  "type": "div",
+  "props": { "children": [] }
+}
+```
+
+`createElement("div", null, a)` 返回：
+
+```js
+{
+  "type": "div",
+  "props": { "children": [a] }
+}
+```
+
+`createElement("div", null, a, b)` 返回：
+
+
+```js
+{
+  "type": "div",
+  "props": { "children": [a, b] }
+}
+```
+
+```js
+function createElement(type, props, ...children) {
+  return {
+    type,
+    props: {
+      ...props,
+      children,
+    },
+  }
+}
+...
+```
+
+> The children array could also contain primitive values like strings or numbers. So we’ll wrap everything that isn’t an object inside its own element and create a special type for them: TEXT_ELEMENT.
+> React doesn’t wrap primitive values or create empty arrays when there aren’t children, but we do it because it will simplify our code, and for our library we prefer simple code than performant code.
+
+children 数组同样能包含原始值，例如 string 数组或者 number 数组。因此我们会将不是对象的所有内容包含在自身元素中并且为他们创建一个特殊类型：`TEXT_ELEMENT`。
+当没有 children 时，React 没有包裹原始值或者创建一个新的空数组，但是我们不这样做因为它会简化我们的代码，对于我们的库，我们更喜欢简单代码而不是高性能代码。
+
+```js
+function createElement(type, props, ...children) {
+  return {
+    type,
+    props: {
+      ...props,
+       children: children.map(child =>
+        typeof child === "object"
+          ? child
+          : createTextElement(child)
+      ),
+    },
+  }
+}
+function createTextElement(text) {
+  return {
+    type: "TEXT_ELEMENT",
+    props: {
+      nodeValue: text,
+      children: [],
+    },
+  }
+}
+...
+```
+
+> We are still using React’s createElement.
+> In order to replace it, let’s give a name to our library. We need a name that sounds like React but also hints its didactic purpose.
+
+我们仍然使用 React 的 createElement 方法。
+为了替换它，让我们给我们的库取一个名字。我们需要一个名字听起来像 React 但是也暗示它的教学目的。
+
+```js
+const element = React.createElement(
+  "div",
+  { id: "foo" },
+  React.createElement("a", null, "bar"),
+  React.createElement("b")
+)
+...
+```
+
+> We’ll call it Didact.
+> But we still want to use JSX here. How do we tell babel to use Didact’s createElement instead of React’s?
+
+我们叫它 Didact
+但是我们仍然希望使用 JSX。我们如果告诉 babel 来使用 Didact 的 createElement 代替 React 的呢？
+
+```js
+const Didact = {
+  createElement,
+}
+​
+const element = Didact.createElement(
+  "div",
+  { id: "foo" },
+  Didact.createElement("a", null, "bar"),
+  Didact.createElement("b")
+)
+```
+
+> If we have a comment like this one, when babel transpiles the JSX it will use the function we define.
+
+如果我们有这样的评论，当babel转译JSX时，它将使用我们定义的功能。
+
+```js
+...
+/** @jsx Didact.createElement */
+const element = (
+  <div id="foo">
+    <a>bar</a>
+    <b />
+  </div>
+)
+...
+```
