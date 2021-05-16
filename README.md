@@ -382,3 +382,171 @@ const element = (
 )
 ...
 ```
+
+## 第 2 步：`render` 函数
+
+> Next, we need to write our version of the ReactDOM.render function.
+
+下一步，我们需要编写我们版本的 ReactDOM.render 函数
+
+```jsx
+ReactDOM.render(element, container)
+```
+
+> For now, we only care about adding stuff to the DOM. We’ll handle updating and deleting later.
+
+现在，我们只关注在 DOM 中添加内容。我们会在稍后处理更新和删除。
+
+```jsx
+function render(element, container) {
+  // TODO create dom nodes
+}
+​
+const Didact = {
+  createElement,
+  render,
+}
+​
+...
+Didact.render(element, container)
+```
+
+> We start by creating the DOM node using the element type, and then append the new node to the container.
+
+我们从使用元素类型创建 DOM 节点开始，然后添加新节点到容器中。
+
+```jsx
+function render(element, container) {
+  const dom = document.createElement(element.type)
+​
+  container.appendChild(dom)
+}
+```
+
+> We recursively do the same for each child.
+
+我们为每一个 child 做相同的递归。
+
+```jsx
+function render(element, container) {
+  const dom = document.createElement(element.type)
+​
+  element.props.children.forEach(child =>
+    render(child, dom)
+  )
+​
+  container.appendChild(dom)
+}
+```
+
+> We also need to handle text elements, if the element type is TEXT_ELEMENT we create a text node instead of a regular node.
+
+我们同样需要处理文本元素，如果元素类型是 `TEXT_ELEMENT` 我们创建文本节点而不是常规节点。
+
+```jsx
+function render(element, container) {
+  const dom =
+    element.type == "TEXT_ELEMENT"
+      ? document.createTextNode("")
+      : document.createElement(element.type)
+​
+  element.props.children.forEach(child =>
+    render(child, dom)
+  )
+​
+  container.appendChild(dom)
+}
+```
+
+> The last thing we need to do here is assign the element props to the node.
+
+这里最后一件需要做的事情是将元素 props 分配给节点。
+
+```jsx
+function render(element, container) {
+  const dom =
+    element.type == "TEXT_ELEMENT"
+      ? document.createTextNode("")
+      : document.createElement(element.type)
+​
+  const isProperty = key => key !== "children"
+  Object.keys(element.props)
+    .filter(isProperty)
+    .forEach(name => {
+      dom[name] = element.props[name]
+    })
+​
+  element.props.children.forEach(child =>
+    render(child, dom)
+  )
+​
+  container.appendChild(dom)
+}
+```
+
+> And that’s it. We now have a library that can render JSX to the DOM.
+> Give it a try on codesandbox.
+
+就是这样，现在，我们有了一个可以渲染 JSX 到 DOM 的库了。
+在 [codesandbox](https://codesandbox.io/s/didact-2-k6rbj) 尝试。
+
+```
+function createElement(type, props, ...children) {
+  return {
+    type,
+    props: {
+      ...props,
+      children: children.map(child =>
+        typeof child === "object"
+          ? child
+          : createTextElement(child)
+      ),
+    },
+  }
+}
+​
+function createTextElement(text) {
+  return {
+    type: "TEXT_ELEMENT",
+    props: {
+      nodeValue: text,
+      children: [],
+    },
+  }
+}
+​
+function render(element, container) {
+  const dom =
+    element.type == "TEXT_ELEMENT"
+      ? document.createTextNode("")
+      : document.createElement(element.type)
+​
+  const isProperty = key => key !== "children"
+  Object.keys(element.props)
+    .filter(isProperty)
+    .forEach(name => {
+      dom[name] = element.props[name]
+    })
+​
+  element.props.children.forEach(child =>
+    render(child, dom)
+  )
+​
+  container.appendChild(dom)
+}
+​
+const Didact = {
+  createElement,
+  render,
+}
+​
+/** @jsx Didact.createElement */
+const element = (
+  <div id="foo">
+    <a>bar</a>
+    <b />
+  </div>
+)
+const container = document.getElementById("root")
+Didact.render(element, container)
+```
