@@ -550,3 +550,72 @@ const element = (
 const container = document.getElementById("root")
 Didact.render(element, container)
 ```
+
+## 第 3 步：并发模式
+
+> But… before we start adding more code we need a refactor.
+
+但是，在我们开始添加更多代码前，我们需要重构。
+
+> There’s a problem with this recursive call.
+> Once we start rendering, we won’t stop until we have rendered the complete element tree. If the element tree is big, it may block the main thread for too long. And if the browser needs to do high priority stuff like handling user input or keeping an animation smooth, it will have to wait until the render finishes.
+
+递归调用存在一个问题。
+一旦我们开始渲染，我们不会停止知道我们渲染了整个元素树。如果元素树太大，可能会长时间阻塞主线程。如果浏览器需要处理高优先级任务，例如处理用户输入或者保持动画流畅，则它不得不等待到渲染结束。
+
+> So we are going to break the work into small units, and after we finish each unit we’ll let the browser interrupt the rendering if there’s anything else that needs to be done.
+
+因此我们将工作拆分成几个小部分，然后在我们结束每个部分后，如果有其他任务需要执行，我们会让浏览器中断渲染。
+
+```jsx
+let nextUnitOfWork = null
+​
+function workLoop(deadline) {
+  let shouldYield = false
+  while (nextUnitOfWork && !shouldYield) {
+    nextUnitOfWork = performUnitOfWork(
+      nextUnitOfWork
+    )
+    shouldYield = deadline.timeRemaining() < 1
+  }
+  requestIdleCallback(workLoop)
+}
+​
+requestIdleCallback(workLoop)
+​
+function performUnitOfWork(nextUnitOfWork) {
+  // TODO
+}
+```
+
+> We use requestIdleCallback to make a loop. You can think of requestIdleCallback as a setTimeout, but instead of us telling it when to run, the browser will run the callback when the main thread is idle.
+> React doesn’t use requestIdleCallback anymore. Now it uses the scheduler package. But for this use case it’s conceptually the same.
+
+我们使用 `requestIdleCallback` 进行循环。你可以把 `requestIdleCallback` 视为 `setTimeout`，但是区别于我们告诉它什么时候运行，浏览器会运行回调当主线程空闲时。
+React 不再使用 `requestIdleCallback`。现在它使用调度包。但是对于这个用例，它在概念上是相同的。
+
+> requestIdleCallback also gives us a deadline parameter. We can use it to check how much time we have until the browser needs to take control again.
+> As of November 2019, Concurrent Mode isn’t stable in React yet. The stable version of the loop looks more like this:
+
+> ```
+> while (nextUnitOfWork) {
+>    nextUnitOfWork = performUnitOfWork(
+>    nextUnitOfWork
+>  )
+>}
+> ```
+
+`requestIdleCallback` 同样给我们一个截止日期参数。我们可以使用它来检查浏览器再次控制还有多长时间。
+截至2019年11月，并发模式在React中还不稳定。 循环的稳定版本看起来像这样：
+
+```jsx
+while (nextUnitOfWork) {
+  nextUnitOfWork = performUnitOfWork(
+    nextUnitOfWork
+  )
+}
+```
+
+> To start using the loop we’ll need to set the first unit of work, and then write a performUnitOfWork function that not only performs the work but also returns the next unit of work.
+
+为了开始使用循环首先我们需要设置第一个工作单元，之后编写 `performUnitOfWork` 函数，该函数不仅执行工作，还返回下一个工作单元。
