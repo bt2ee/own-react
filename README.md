@@ -1,4 +1,5 @@
 > 来源于：https://pomb.us/build-your-own-react/
+
 ## Build your own React
 
 > We are going to rewrite React from scratch. Step by step. Following the architecture from the real React code but without all the optimizations and non-essential features.
@@ -10,6 +11,7 @@
 如果你阅读过任何[我以前“创建你自己的 React”文章](https://engineering.hexacta.com/didact-learning-how-react-works-by-building-it-from-scratch-51007984e5c5)，区别于前者基于 React 16.8，因此我们现在可以使用 hooks 并且下掉基于类的所有代码。
 
 > Starting from scratch, these are all the things we’ll add to our version of React one by one:
+>
 > - Step I: The createElement Function
 > - Step II: The render Function
 > - Step III: Concurrent Mode
@@ -19,7 +21,7 @@
 > - Step VII: Function Components
 > - Step VIII: Hooks
 
-从头开始，所有这些都是我们将一一添加到我们的React版本中的所有内容：
+从头开始，所有这些都是我们将一一添加到我们的 React 版本中的所有内容：
 
 - I、createElement 函数
 - II、render 函数
@@ -43,9 +45,9 @@
 我们将使用 React 应用，仅仅只有三行代码，第一行定义了一个 React 元素。下一行通过 DOM 获取了一个节点。最后一行将 React 节点渲染到容器中
 
 ```js
-const element = <h1 title="foo">Hello</h1>
-const container = document.getElementById("root")
-ReactDOM.render(element, container)
+const element = <h1 title="foo">Hello</h1>;
+const container = document.getElementById("root");
+ReactDOM.render(element, container);
 ```
 
 > **Let’s remove all the React specific code and replace it with vanilla JavaScript.**
@@ -56,20 +58,16 @@ ReactDOM.render(element, container)
 > JSX is transformed to JS by build tools like Babel. The transformation is usually simple: replace the code inside the tags with a call to createElement, passing the tag name, the props and the children as parameters.
 
 ```js
-const element = <h1 title="foo">Hello</h1>
+const element = <h1 title="foo">Hello</h1>;
 ```
 
-在第一行我们有了 JSX 定义的元素。它甚至不是有效的JavaScript，因此，为了用原始 JavaScript 替代它，首先我们需要用有效的 JS 替代它。
+在第一行我们有了 JSX 定义的元素。它甚至不是有效的 JavaScript，因此，为了用原始 JavaScript 替代它，首先我们需要用有效的 JS 替代它。
 JSX 通过 Babel 这样的构建工具被转换成 JS。转换通常很简单：调用 createElement 来替换标签内的代码，传递名称，props 和 children 作为参数。
 
 > React.createElement creates an object from its arguments. Besides some validations, that’s all it does. So we can safely replace the function call with its output.
 
 ```js
-const element = React.createElement(
-  "h1",
-  { title: "foo" },
-  "Hello"
-)
+const element = React.createElement("h1", { title: "foo" }, "Hello");
 ```
 
 React.createElement 根据参数创建一个对象。除了一些验证外，这就是它全部的工作。因此，我们可以安全地将函数调用替换为其输出。
@@ -89,7 +87,7 @@ const element = {
     title: "foo",
     children: "Hello",
   },
-}
+};
 ```
 
 这就是一个元素，一个具有两个属性的元素：type 和 props（好吧，它还有[更多属性](https://github.com/facebook/react/blob/f4cc45ce962adc9f307690e1d5cfa28a288418eb/packages/react/src/ReactElement.js#L111)，但是我们只关心这两个）
@@ -105,17 +103,17 @@ props 是另一个对象，它具有 JSX 属性中的所有键和值。 它还�
 > render is where React changes the DOM, so let’s do the updates ourselves.
 
 ```js
-ReactDOM.render(element, container)
+ReactDOM.render(element, container);
 ```
 
 另一段我们需要替换的 React 代码是 ReactDOM.render 的调用。
 渲染是 React 更改 DOM 的地方，因此我们自己进行更新。
 
-> First we create a node* using the element type, in this case h1.
+> First we create a node\* using the element type, in this case h1.
 >
 > Then we assign all the element props to that node. Here it’s just the title.
 >
-> * To avoid confusion, I’ll use “element” to refer to React elements and “node” for DOM elements.
+> - To avoid confusion, I’ll use “element” to refer to React elements and “node” for DOM elements.
 
 首先我们使用 type 元素创建一个节点，在本例中的 h1。
 然后我们把所有元素 props 分配给这个节点。在这里就是 title。
@@ -222,9 +220,9 @@ const element = (
     <a>bar</a>
     <b />
   </div>
-)
-const container = document.getElementById("root")
-ReactDOM.render(element, container)
+);
+const container = document.getElementById("root");
+ReactDOM.render(element, container);
 ```
 
 > As we saw in the previous step, an element is an object with type and props. The only thing that our function needs to do is create that object.
@@ -244,18 +242,18 @@ const element = React.createElement(
 > We use the spread operator for the props and the rest parameter syntax for the children, this way the children prop will always be an array.
 > For example, createElement("div") returns:
 > {
->   "type": "div",
->   "props": { "children": [] }
+> "type": "div",
+> "props": { "children": [] }
 > }
 > createElement("div", null, a) returns:
 > {
->   "type": "div",
->   "props": { "children": [a] }
+> "type": "div",
+> "props": { "children": [a] }
 > }
 > and createElement("div", null, a, b) returns:
 > {
->  "type": "div",
->  "props": { "children": [a, b] }
+> "type": "div",
+> "props": { "children": [a, b] }
 > }
 
 我们对 props 使用展开操作符并且对 children 使用 rest 参数语法，这样 children prop 将始终是一个数组。
@@ -278,7 +276,6 @@ const element = React.createElement(
 ```
 
 `createElement("div", null, a, b)` 返回：
-
 
 ```js
 {
@@ -369,7 +366,7 @@ const element = Didact.createElement(
 
 > If we have a comment like this one, when babel transpiles the JSX it will use the function we define.
 
-如果我们有这样的评论，当babel转译JSX时，它将使用我们定义的功能。
+如果我们有这样的评论，当 babel 转译 JSX 时，它将使用我们定义的功能。
 
 ```js
 ...
@@ -390,7 +387,7 @@ const element = (
 下一步，我们需要编写我们版本的 ReactDOM.render 函数
 
 ```jsx
-ReactDOM.render(element, container)
+ReactDOM.render(element, container);
 ```
 
 > For now, we only care about adding stuff to the DOM. We’ll handle updating and deleting later.
@@ -602,20 +599,356 @@ React 不再使用 `requestIdleCallback`。现在它使用调度包。但是对�
 >    nextUnitOfWork = performUnitOfWork(
 >    nextUnitOfWork
 >  )
->}
+> }
 > ```
 
 `requestIdleCallback` 同样给我们一个截止日期参数。我们可以使用它来检查浏览器再次控制还有多长时间。
-截至2019年11月，并发模式在React中还不稳定。 循环的稳定版本看起来像这样：
+截至 2019 年 11 月，并发模式在 React 中还不稳定。 循环的稳定版本看起来像这样：
 
 ```jsx
 while (nextUnitOfWork) {
-  nextUnitOfWork = performUnitOfWork(
-    nextUnitOfWork
-  )
+  nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
 }
 ```
 
 > To start using the loop we’ll need to set the first unit of work, and then write a performUnitOfWork function that not only performs the work but also returns the next unit of work.
 
 为了开始使用循环首先我们需要设置第一个工作单元，之后编写 `performUnitOfWork` 函数，该函数不仅执行工作，还返回下一个工作单元。
+
+## 第 4 步：Fiber
+
+> To organize the units of work we’ll need a data structure: a fiber tree.
+> We’ll have one fiber for each element and each fiber will be a unit of work.
+> Let me show you with an example.
+> Suppose we want to render an element tree like this one:
+
+为了组织工作单元我们会需要一个数据结构：fiber 树。
+我们每个元素会有一个 fiber 并且每个 fiber 会成为一个工作单元。
+让我们看一下示例。
+
+![image](https://user-images.githubusercontent.com/32665965/118453832-3e7fbb80-b72a-11eb-9e9d-6c0999c19397.png)
+
+假设我们需要渲染像下面的一个元素树：
+
+```jsx
+Didact.render(
+  <div>
+    <h1>
+      <p />
+      <a />
+    </h1>
+    <h2 />
+  </div>,
+  container
+);
+```
+
+> In the render we’ll create the root fiber and set it as the nextUnitOfWork. The rest of the work will happen on the performUnitOfWork function, there we will do three things for each fiber:
+>
+> 1. add the element to the DOM
+> 2. create the fibers for the element’s children
+> 3. select the next unit of work
+
+渲染中我们会创建根 fiber 并且设置它作为 `nextUnitOfWork`。剩余的工作将会在 `performUnitOfWork` 中进行，我们将会为每个 fiber 做三件事：
+
+1. 向 DOM 添加元素
+2. 为元素的子节点创建 fiber
+3. 选择下一个工作单元。
+
+> One of the goals of this data structure is to make it easy to find the next unit of work. That’s why each fiber has a link to its first child, its next sibling and its parent.
+
+这个数据结构的目标之一就是能够更好的找到下一个工作单元。这就是为什么每个 fiber 都要连接链接第一个子节点，下一个兄弟节点和父节点。
+
+![image](https://user-images.githubusercontent.com/32665965/118455098-91a63e00-b72b-11eb-8f36-55ed303aa9e5.png)
+
+> When we finish performing work on a fiber, if it has a child that fiber will be the next unit of work.
+> From our example, when we finish working on the div fiber the next unit of work will be the h1 fiber.
+
+当我们完成对 fiber 的工作，如果它有子节点，那么 fiber 将会是下一个工作单元。
+从我们对示例中，当我们结束 div fiber 工作，一个工作单元将会是 h1 fiber。
+
+> If the fiber doesn’t have a child, we use the sibling as the next unit of work.
+> For example, the p fiber doesn’t have a child so we move to the a fiber after finishing it.
+
+如果 fiber 没有子节点，我们会使用兄弟节点作为下一个工作单元。
+例如，p fiber 没有子节点因此当结束时我们移动至 a fiber。
+
+> And if the fiber doesn’t have a child nor a sibling we go to the “uncle”: the sibling of the parent. Like a and h2 fibers from the example.
+> Also, if the parent doesn’t have a sibling, we keep going up through the parents until we find one with a sibling or until we reach the root. If we have reached the root, it means we have finished performing all the work for this render.
+
+并且如果 fiber 没有子节点或者兄弟节点，我们会返回至“叔叔”：兄弟节点的父节点。就像示例中的 a 和 h2 fiber。
+另外，如果父节点没有兄弟，我们会不断检查父节点直到找到有兄弟节点的父节点或者根节点。如果达到根节点，意味着我们以及完成了渲染的全部工作。
+
+> Now let’s put it into code.
+
+现在，将其放入代码中。
+
+> First, let’s remove this code from the render function.
+
+首先，让我们从 render 函数中移动代码。
+
+```jsx
+function render(element, container) {
+  const dom =
+    element.type == "TEXT_ELEMENT"
+      ? document.createTextNode("")
+      : document.createElement(element.type)
+​
+  const isProperty = key => key !== "children"
+  Object.keys(element.props)
+    .filter(isProperty)
+    .forEach(name => {
+      dom[name] = element.props[name]
+    })
+​
+  element.props.children.forEach(child =>
+    render(child, dom)
+  )
+​
+  container.appendChild(dom)
+}
+​
+let nextUnitOfWork = null
+```
+
+> We keep the part that creates a DOM node in its own function, we are going to use it later.
+
+我们将创建 DOM 节点的部分保留在其自身的功能中，稍后将使用它。
+
+```jsx
+function createDom(fiber) {
+  const dom =
+    fiber.type == "TEXT_ELEMENT"
+      ? document.createTextNode("")
+      : document.createElement(fiber.type)
+​
+  const isProperty = key => key !== "children"
+  Object.keys(fiber.props)
+    .filter(isProperty)
+    .forEach(name => {
+      dom[name] = fiber.props[name]
+    })
+​
+  return dom
+}
+​
+function render(element, container) {
+  // TODO set next unit of work
+}
+​
+let nextUnitOfWork = null
+```
+
+> In the render function we set nextUnitOfWork to the root of the fiber tree.
+
+在 render 函数中我们设置 `nextUnitOfWork` fiber 树的根。
+
+```jsx
+function render(element, container) {
+  nextUnitOfWork = {
+    dom: container,
+    props: {
+      children: [element],
+    },
+  }
+}
+​
+let nextUnitOfWork = null
+```
+
+> Then, when the browser is ready,it will call our workLoop and we’ll start working on the root.
+
+之后，当浏览器准备好，它会运行我们的 `workLoop`，我们将在根目录上开始工作。
+
+```jsx
+function workLoop(deadline) {
+  let shouldYield = false
+  while (nextUnitOfWork && !shouldYield) {
+    nextUnitOfWork = performUnitOfWork(
+      nextUnitOfWork
+    )
+    shouldYield = deadline.timeRemaining() < 1
+  }
+  requestIdleCallback(workLoop)
+}
+​
+requestIdleCallback(workLoop)
+​
+function performUnitOfWork(fiber) {
+  // TODO add dom node
+  // TODO create new fibers
+  // TODO return next unit of work
+}
+```
+
+> First, we create a new node and append it to the DOM.
+> We keep track of the DOM node in the fiber.dom property.
+
+首先，我们创建一个新节点并且添加到 DOM 中。
+我们在 fiber.dom 属性中跟踪 DOM 节点。
+
+```jsx
+function performUnitOfWork(fiber) {
+  if (!fiber.dom) {
+    fiber.dom = createDom(fiber)
+  }
+​
+  if (fiber.parent) {
+    fiber.parent.dom.appendChild(fiber.dom)
+  }
+​
+  // TODO create new fibers
+  // TODO return next unit of work
+}
+```
+
+> Then for each child we create a new fiber.
+
+之后，每一个子节点我们创建一个新的 fiber 节点。
+
+```jsx
+function performUnitOfWork(fiber) {
+  ...
+
+  const elements = fiber.props.children
+  let index = 0
+  let prevSibling = null
+​
+  while (index < elements.length) {
+    const element = elements[index]
+​
+    const newFiber = {
+      type: element.type,
+      props: element.props,
+      parent: fiber,
+      dom: null,
+    }
+  }
+​
+  // TODO return next unit of work
+}
+```
+
+> And we add it to the fiber tree setting it either as a child or as a sibling, depending on whether it’s the first child or not.
+
+我们添加它到 fiber 树，设置它为子节点或者兄弟节点，依赖于它是不是第一个子节点。
+
+```jsx
+function performUnitOfWork(fiber) {
+  ...
+
+  while (index < elements.length) {
+    const element = elements[index]
+​
+    const newFiber = {
+      type: element.type,
+      props: element.props,
+      parent: fiber,
+      dom: null,
+    }
+
+     if (index === 0) {
+      fiber.child = newFiber
+    } else {
+      prevSibling.sibling = newFiber
+    }
+​
+    prevSibling = newFiber
+    index++
+  }
+​
+  // TODO return next unit of work
+}
+```
+
+> Finally we search for the next unit of work. We first try with the child, then with the sibling, then with the uncle, and so on.
+
+最后我们搜索下一个工作单元。我们首先搜索子节点，然后是兄弟节点，然后是叔叔，以此类推...
+
+```jsx
+function performUnitOfWork(fiber) {
+  ...
+
+  while (index < elements.length) {
+    const element = elements[index]
+​
+    const newFiber = {
+      type: element.type,
+      props: element.props,
+      parent: fiber,
+      dom: null,
+    }
+
+     if (index === 0) {
+      fiber.child = newFiber
+    } else {
+      prevSibling.sibling = newFiber
+    }
+​
+    prevSibling = newFiber
+    index++
+  }
+​
+  if (fiber.child) {
+    return fiber.child
+  }
+  let nextFiber = fiber
+  while (nextFiber) {
+    if (nextFiber.sibling) {
+      return nextFiber.sibling
+    }
+    nextFiber = nextFiber.parent
+  }
+}
+```
+
+> And that’s our performUnitOfWork.
+
+这就是我们的 `performUnitOfWork`。
+
+```jsx
+function performUnitOfWork(fiber) {
+  if (!fiber.dom) {
+    fiber.dom = createDom(fiber)
+  }
+​
+  if (fiber.parent) {
+    fiber.parent.dom.appendChild(fiber.dom)
+  }
+​
+  const elements = fiber.props.children
+  let index = 0
+  let prevSibling = null
+​
+  while (index < elements.length) {
+    const element = elements[index]
+​
+    const newFiber = {
+      type: element.type,
+      props: element.props,
+      parent: fiber,
+      dom: null,
+    }
+​
+    if (index === 0) {
+      fiber.child = newFiber
+    } else {
+      prevSibling.sibling = newFiber
+    }
+​
+    prevSibling = newFiber
+    index++
+  }
+​
+  if (fiber.child) {
+    return fiber.child
+  }
+  let nextFiber = fiber
+  while (nextFiber) {
+    if (nextFiber.sibling) {
+      return nextFiber.sibling
+    }
+    nextFiber = nextFiber.parent
+  }
+}
+```
