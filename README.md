@@ -1054,7 +1054,7 @@ function commitWork(fiber) {
 }
 ```
 
-## 第 6 步：和解(Reconciliation)
+## 第 6 步：协调(Reconciliation)
 
 > So far we only added stuff to the DOM, but what about updating or deleting nodes?
 > That’s what we are going to do now, we need to compare the elements we receive on the `render` function to the last fiber tree we committed to the DOM.
@@ -1139,3 +1139,387 @@ function performUnitOfWork(fiber) {
   }
 }
 ```
+
+> …to a new reconcileChildren function.
+
+新的 `reconcileChildren` 函数。
+
+```jsx
+
+function performUnitOfWork(fiber) {
+  if (!fiber.dom) {
+    fiber.dom = createDom(fiber)
+  }
+​
+  const elements = fiber.props.children
+  reconcileChildren(fiber, elements)
+​
+  ...
+
+  while (nextFiber) {
+    if (nextFiber.sibling) {
+      return nextFiber.sibling
+    }
+    nextFiber = nextFiber.parent
+  }
+}
+​
+function reconcileChildren(wipFiber, elements) {
+  let index = 0
+  let prevSibling = null
+```
+
+> Here we will reconcile the old fibers with the new elements.
+
+现在我们会将旧 fiber 和新元素进行协调。
+
+> We iterate at the same time over the children of the old fiber (wipFiber.alternate) and the array of elements we want to reconcile.
+> If we ignore all the boilerplate needed to iterate over an array and a linked list at the same time, we are left with what matters most inside this while: oldFiber and element. The element is the thing we want to render to the DOM and the oldFiber is what we rendered the last time.
+> We need to compare them to see if there’s any change we need to apply to the DOM.
+
+我们同时遍历旧 fiber 的子级（`wipFiber.alternate`）和要协调的元素数组。
+如果我们忽略同时遍历数组和链接列表的所有样板，那么在此期间剩下的最重要的是：oldFiber 和 element。元素是我们想要渲染到 DOM 中的东西，oldFiber 是我们上次渲染的东西。
+我们需要比较他们然后查看是否有我们需要对 DOM 进行任何更改。
+
+```jsx
+function reconcileChildren(wipFiber, elements) {
+  let index = 0
+  let oldFiber =
+    wipFiber.alternate && wipFiber.alternate.child
+  let prevSibling = null
+​
+  while (
+    index < elements.length ||
+    oldFiber != null
+  ) {
+    const element = elements[index]
+    let newFiber = null
+​
+    // TODO compare oldFiber to element
+​
+    if (oldFiber) {
+      oldFiber = oldFiber.sibling
+    }
+```
+
+> To compare them we use the type:
+> - if the old fiber and the new element have the same type, we can keep the DOM node and just update it with the new props
+> - if the type is different and there is a new element, it means we need to create a new DOM node
+> - and if the types are different and there is an old fiber, we need to remove the old node
+>
+> Here React also uses keys, that makes a better reconciliation. For example, it detects when children change places in the element array.
+
+为了比较他们我们使用类型：
+- 如果旧 fiber 和新元素有一样对类型，我们可以保持 DOM 节点并且仅仅更新新的 props。
+- 如果类型和新元素不一样，意味着我们需要创建一个新的 DOM 节点。
+- 如果类型不一样并且有旧 fiber，我们需需要移除旧的节点。
+
+这里 React 也是使用的 keys 来更好的协调。例如，它检测子元素何时更改元素数组中的位置。
+
+```jsx
+  const element = elements[index]
+  let newFiber = null
+​
+  const sameType =
+    oldFiber &&
+    element &&
+    element.type == oldFiber.type
+​
+  if (sameType) {
+    // TODO update the node
+  }
+  if (element && !sameType) {
+
+
+
+    // TODO add this node
+  }
+  if (oldFiber && !sameType) {
+    // TODO delete the oldFiber's node
+  }
+​
+  if (oldFiber) {
+    oldFiber = oldFiber.sibling
+  }
+```
+
+> When the old fiber and the element have the same type, we create a new fiber keeping the DOM node from the old fiber and the props from the element.
+> We also add a new property to the fiber: the effectTag. We’ll use this property later, during the commit phase.
+
+当旧 fiber 和元素有一样当类型时，我们创建一个新的 fiber，以使 DOM 节点与旧 fiber 和元素的 props 保持一致。
+我们同样给 fiber 添加一个属性：`effectTag`，我们会在稍后提交阶段使用这个属性。
+
+```jsx
+  const sameType =
+    oldFiber &&
+    element &&
+    element.type == oldFiber.type
+​
+  if (sameType) {
+    newFiber = {
+      type: oldFiber.type,
+      props: element.props,
+      dom: oldFiber.dom,
+      parent: wipFiber,
+      alternate: oldFiber,
+      effectTag: "UPDATE",
+    }
+  }
+  if (element && !sameType) {
+    // TODO add this node
+  }
+```
+
+> Then for the case where the element needs a new DOM node we tag the new fiber with the PLACEMENT effect tag.
+
+然后，对于元素需要新 DOM 节点的情况，我们使用 `PLACEMENT`效果标签来标记新的 fiber。
+
+```jsx
+if (element && !sameType) {
+  newFiber = {
+    type: element.type,
+    props: element.props,
+    dom: null,
+    parent: wipFiber,
+    alternate: null,
+    effectTag: "PLACEMENT",
+  }
+}
+```
+
+> And for the case where we need to delete the node, we don’t have a new fiber so we add the effect tag to the old fiber.
+> But when we commit the fiber tree to the DOM we do it from the work in progress root, which doesn’t have the old fibers.
+
+对于需要删除节点的情况，我们没有新 fiber 所以我们向旧 fiber 添加效果标签。
+但是当我们向 DOM 提交 fiber 树，我们是从正在进行的根目录开始的，他没有旧 fiber。
+
+```jsx
+  if (oldFiber && !sameType) {
+    oldFiber.effectTag = "DELETION"
+    deletions.push(oldFiber)
+  }
+```
+
+> So we need an array to keep track of the nodes we want to remove.
+
+所以我们需要一个数组追踪我们想要移除的节点。
+
+```jsx
+function render(element, container) {
+  ...
+  deletions = []
+  nextUnitOfWork = wipRoot
+}
+​
+let nextUnitOfWork = null
+let currentRoot = null
+let wipRoot = null
+let deletions = null
+```
+
+> And then, when we are commiting the changes to the DOM, we also use the fibers from that array.
+
+之后，当我们向 DOM 提交更改，我们也要使用数组中的 fiber。
+
+```jsx
+function commitRoot() {
+  deletions.forEach(commitWork)
+  commitWork(wipRoot.child)
+  currentRoot = wipRoot
+  wipRoot = null
+}
+```
+
+> Now, let’s change the commitWork function to handle the new effectTags.
+
+现在，我们更改 `commitWork` 函数来处理 `effectTags`。
+
+```jsx
+function commitWork(fiber) {
+  if (!fiber) {
+    return
+  }
+  const domParent = fiber.parent.dom
+  domParent.appendChild(fiber.dom)
+  commitWork(fiber.child)
+  commitWork(fiber.sibling)
+}
+```
+
+> If the fiber has a PLACEMENT effect tag we do the same as before, append the DOM node to the node from the parent fiber.
+
+如果 fiber 有 `PLACEMENT` 效果标签我们和之前一样操作，添加 DOM 节点到父 fiber 节点上。
+
+```jsx
+function commitWork(fiber) {
+  if (!fiber) {
+    return
+  }
+  const domParent = fiber.parent.dom
+  if (
+    fiber.effectTag === "PLACEMENT" &&
+    fiber.dom != null
+  ) {
+    domParent.appendChild(fiber.dom)
+  }
+​
+  commitWork(fiber.child)
+  commitWork(fiber.sibling)
+}
+```
+
+> If it’s a DELETION, we do the opposite, remove the child.
+
+如果是 `DELETION`，我们做相反的事情，删除子节点。
+
+```jsx
+function commitWork(fiber) {
+  ...
+  if (
+    fiber.effectTag === "PLACEMENT" &&
+    fiber.dom != null
+  ) {
+    domParent.appendChild(fiber.dom)
+  } else if (fiber.effectTag === "DELETION") {
+    domParent.removeChild(fiber.dom)
+  }
+​
+  commitWork(fiber.child)
+  commitWork(fiber.sibling)
+}
+```
+
+> And if it’s an UPDATE, we need to update the existing DOM node with the props that changed.
+
+如果是 `UPDATE`，我们需要更改 props 来更新已经存在的 DOM 节点。
+
+```jsx
+function commitWork(fiber) {
+  ...
+  if (
+    fiber.effectTag === "PLACEMENT" &&
+    fiber.dom != null
+  ) {
+    domParent.appendChild(fiber.dom)
+  } else if (
+    fiber.effectTag === "UPDATE" &&
+    fiber.dom != null
+  ) {
+    updateDom(
+      fiber.dom,
+      fiber.alternate.props,
+      fiber.props
+    )
+  } else if (fiber.effectTag === "DELETION") {
+    domParent.removeChild(fiber.dom)
+  }
+​
+  commitWork(fiber.child)
+  commitWork(fiber.sibling)
+}
+```
+
+ > We’ll do it in this updateDom function.
+
+ 我们将在此 `updateDom` 函数中进行操作。
+
+ ```jsx
+function updateDom(dom, prevProps, nextProps) {
+  // TODO
+}
+```
+
+> We compare the props from the old fiber to the props of the new fiber, remove the props that are gone, and set the props that are new or changed.
+
+我们比较旧 fiber 节点和新 fiber 节点的 props，删除消失的 props，设置新的或者更改 props。
+
+```jsx
+const isProperty = key => key !== "children"
+const isNew = (prev, next) => key =>
+  prev[key] !== next[key]
+const isGone = (prev, next) => key => !(key in next)
+function updateDom(dom, prevProps, nextProps) {
+  // Remove old properties
+  Object.keys(prevProps)
+    .filter(isProperty)
+    .filter(isGone(prevProps, nextProps))
+    .forEach(name => {
+      dom[name] = ""
+    })
+​
+  // Set new or changed properties
+  Object.keys(nextProps)
+    .filter(isProperty)
+    .filter(isNew(prevProps, nextProps))
+    .forEach(name => {
+      dom[name] = nextProps[name]
+    })
+}
+```
+
+> One special kind of prop that we need to update are event listeners, so if the prop name starts with the “on” prefix we’ll handle them differently.
+
+我们需要更新中有一个特别的 prop 是时间监听器，因此如果 prop 名字以 “on” 为前缀我们会用不同方式处理。
+
+```jsx
+const isEvent = key => key.startsWith("on")
+const isProperty = key =>
+  key !== "children" && !isEvent(key)
+```
+
+> If the event handler changed we remove it from the node.
+
+如果事件处理改变了我们从节点中将它删除。
+
+```jsx
+function updateDom(dom, prevProps, nextProps) {
+  //Remove old or changed event listeners
+  Object.keys(prevProps)
+    .filter(isEvent)
+    .filter(
+      key =>
+        !(key in nextProps) ||
+        isNew(prevProps, nextProps)(key)
+    )
+    .forEach(name => {
+      const eventType = name
+        .toLowerCase()
+        .substring(2)
+      dom.removeEventListener(
+        eventType,
+        prevProps[name]
+      )
+    })
+​
+  // Remove old properties
+```
+
+> And then we add the new handler.
+
+然后，我们添加新的处理程序。
+
+```jsx
+  .filter(isNew(prevProps, nextProps))
+    .forEach(name => {
+      dom[name] = nextProps[name]
+    })
+​
+  // Add event listeners
+  Object.keys(nextProps)
+    .filter(isEvent)
+    .filter(isNew(prevProps, nextProps))
+    .forEach(name => {
+      const eventType = name
+        .toLowerCase()
+        .substring(2)
+      dom.addEventListener(
+        eventType,
+        nextProps[name]
+      )
+    })
+}
+```
+
+> Try the version with reconciliation on codesandbox.
+
+在 [codesandbox](https://codesandbox.io/s/didact-6-96533) 上尝试
