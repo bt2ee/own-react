@@ -952,3 +952,104 @@ function performUnitOfWork(fiber) {
   }
 }
 ```
+
+## 第 5 步：渲染和提交阶段
+
+> We have another problem here.
+> We are adding a new node to the DOM each time we work on an element. And, remember, the browser could interrupt our work before we finish rendering the whole tree. In that case, the user will see an incomplete UI. And we don’t want that.
+
+我们有另外一个问题。
+每次处理元素时，我们都要添加一个新节点到 DOM 中，浏览器能在我们渲染整个树前打断我们的工作。在这种情况下，用户会看见不完整的 UI。但这不是我们想要的。
+
+```jsx
+function performUnitOfWork(fiber) {
+  ...
+​
+  if (fiber.parent) {
+    fiber.parent.dom.appendChild(fiber.dom)
+  }
+​
+  ...
+}
+```
+
+> So we need to remove the part that mutates the DOM from here.
+
+因此我们需要移除这里转变 DOM 的部分。
+
+```jsx
+function performUnitOfWork(fiber) {
+  ...
+​
+  // if (fiber.parent) {
+  //  fiber.parent.dom.appendChild(fiber.dom)
+  // }
+​
+  ...
+}
+```
+
+> Instead, we’ll keep track of the root of the fiber tree. We call it the work in progress root or wipRoot.
+
+相反，我们将跟踪 fiber 树的根。 我们称为进行中的工作根或 `wipRoot`。
+
+```
+function render(element, container) {
+  wipRoot = {
+    dom: container,
+    props: {
+      children: [element],
+    },
+  }
+  nextUnitOfWork = wipRoot
+}
+​
+let nextUnitOfWork = null
+let wipRoot = null
+```
+
+> And once we finish all the work (we know it because there isn’t a next unit of work) we commit the whole fiber tree to the DOM.
+
+一旦我们结束所有工作（我们知道工作结束是因为没有下一个工作单元），我们向 DOM 提交整个 fiber 树。
+
+```jsx
+function commitRoot() {
+  // TODO add nodes to dom
+}
+​
+...
+
+let nextUnitOfWork = null
+let wipRoot = null
+​
+function workLoop(deadline) {
+  ...
+​
+  if (!nextUnitOfWork && wipRoot) {
+    commitRoot()
+  }
+​
+  requestIdleCallback(workLoop)
+}
+```
+
+> We do it in the commitRoot function. Here we recursively append all the nodes to the dom.
+
+我们在 commitRoot 函数中处理。在这里，我们将所有节点递归加入 dom 中。
+
+```jsx
+function commitRoot() {
+  commitWork(wipRoot.child)
+  wipRoot = null
+}
+​
+function commitWork(fiber) {
+  if (!fiber) {
+    return
+  }
+  const domParent = fiber.parent.dom
+  domParent.appendChild(fiber.dom)
+  commitWork(fiber.child)
+  commitWork(fiber.sibling)
+}
+```
