@@ -1053,3 +1053,89 @@ function commitWork(fiber) {
   commitWork(fiber.sibling)
 }
 ```
+
+## 第 6 步：和解(Reconciliation)
+
+> So far we only added stuff to the DOM, but what about updating or deleting nodes?
+> That’s what we are going to do now, we need to compare the elements we receive on the `render` function to the last fiber tree we committed to the DOM.
+
+目前为止我们仅仅向 DOM 中添加了东西，但是更新和删除节点应该怎么办呢？
+这是我们现在需要解决的，我们需要比较在 `render` 函数中获得的元素和上一次向 DOM 提交的 fiber 树。
+
+> So we need to save a reference to that “last fiber tree we committed to the DOM” after we finish the commit. We call it currentRoot.
+> We also add the alternate property to every fiber. This property is a link to the old fiber, the fiber that we committed to the DOM in the previous commit phase.
+
+因此在我们结束提交后我们需要减少和 “上一次向 DOM 提交的 fiber 树” 联系。我们称它为 `currentRoot`。
+我们还添加 `alternate` 属性到每个 fiber 节点。这个属性用来和我们在上一个提交阶段向 DOM 提交的 fiber 产生连接。
+
+```jsx
+function commitRoot() {
+  commitWork(wipRoot.child)
+  currentRoot = wipRoot
+  wipRoot = null
+}
+​
+...
+​
+function render(element, container) {
+  wipRoot = {
+    dom: container,
+    props: {
+      children: [element],
+    },
+    alternate: currentRoot,
+  }
+  nextUnitOfWork = wipRoot
+}
+​
+let nextUnitOfWork = null
+let currentRoot = null
+let wipRoot = null
+```
+
+> Now let’s extract the code from performUnitOfWork that creates the new fibers…
+
+现在，让我们从 `performUnitOfWork` 中提取代码创建新的 fiber...
+
+```jsx
+function performUnitOfWork(fiber) {
+  if (!fiber.dom) {
+    fiber.dom = createDom(fiber)
+  }
+​
+  const elements = fiber.props.children
+  let index = 0
+  let prevSibling = null
+​
+  while (index < elements.length) {
+    const element = elements[index]
+​
+    const newFiber = {
+      type: element.type,
+      props: element.props,
+      parent: fiber,
+      dom: null,
+    }
+​
+    if (index === 0) {
+      fiber.child = newFiber
+    } else {
+      prevSibling.sibling = newFiber
+    }
+​
+    prevSibling = newFiber
+    index++
+  }
+​
+  if (fiber.child) {
+    return fiber.child
+  }
+  let nextFiber = fiber
+  while (nextFiber) {
+    if (nextFiber.sibling) {
+      return nextFiber.sibling
+    }
+    nextFiber = nextFiber.parent
+  }
+}
+```
