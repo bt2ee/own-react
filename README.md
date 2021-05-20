@@ -1726,3 +1726,539 @@ function commitDeletion(fiber, domParent) {
   }
 }
 ```
+
+## 第 8 步：Hooks
+
+> Last step. Now that we have function components let’s also add state.
+
+最后一步。现在我们有了函数组件，让我们添加状态。
+
+```jsx
+/** @jsx Didact.createElement */
+function App(props) {
+  return <h1>Hi {props.name}</h1>
+}
+const element = <App name="foo" />
+const container = document.getElementById("root")
+Didact.render(element, container)
+```
+
+> Let’s change our example to the classic counter component. Each time we click it, it increments the state by one.
+> Note that we are using Didact.useState to get and update the counter value.
+
+我们更改我们的示例为经典计数组件。每次我们点击它，它的状态 +1。
+注意我们使用 `Didact.useState` 来获取和更新计数值。
+
+```jsx
+const Didact = {
+  createElement,
+  render,
+  useState,
+}
+​
+/** @jsx Didact.createElement */
+function Counter() {
+  const [state, setState] = Didact.useState(1)
+  return (
+    <h1 onClick={() => setState(c => c + 1)}>
+      Count: {state}
+    </h1>
+  )
+}
+const element = <Counter />
+```
+
+> Here is where we call the Counter function from the example. And inside that function we call useState.
+
+这里，我们例子中调用 `Counter` 函数。在函数内部我们调用 `useState`。
+
+```jsx
+function updateFunctionComponent(fiber) {
+  const children = [fiber.type(fiber.props)]
+  reconcileChildren(fiber, children)
+}
+​
+function useState(initial) {
+  // TODO
+}
+```
+
+> We need to initialize some global variables before calling the function component so we can use them inside of the useState function.
+> First we set the work in progress fiber.
+> We also add a hooks array to the fiber to support calling useState several times in the same component. And we keep track of the current hook index.
+
+在我们调用函数组件前我们需要新建一些全局变量，以便于我们能在 useState 函数中使用。
+首先我们设置进行中 fiber。
+我们同样添加一个 hooks 数组到fiber 中来支持调用 useState 在相同的组件多次调用。并且我们追踪当前 hook 索引。
+
+```jsx
+let wipFiber = null
+let hookIndex = null
+​
+function updateFunctionComponent(fiber) {
+  wipFiber = fiber
+  hookIndex = 0
+  wipFiber.hooks = []
+  const children = [fiber.type(fiber.props)]
+  reconcileChildren(fiber, children)
+}
+```
+
+> When the function component calls useState, we check if we have an old hook. We check in the alternate of the fiber using the hook index.
+> If we have an old hook, we copy the state from the old hook to the new hook, if we don’t we initialize the state.
+> Then we add the new hook to the fiber, increment the hook index by one, and return the state.
+
+当函数组件调用 useState 时，我们检查是否我们有旧的 hook。我们使用钩子索引检入 fiber 的替代项。
+如果我们有旧 hook，我们复制旧 hook 的状态到新 hook 中，如果我们没有我们新建状态。
+然后我们添加新 hook 到 fiber 中，hook 索引+1，返回状态。
+
+
+```jsx
+function useState(initial) {
+  const oldHook =
+    wipFiber.alternate &&
+    wipFiber.alternate.hooks &&
+    wipFiber.alternate.hooks[hookIndex]
+  const hook = {
+    state: oldHook ? oldHook.state : initial,
+  }
+​
+  wipFiber.hooks.push(hook)
+  hookIndex++
+  return [hook.state]
+}
+```
+
+> useState should also return a function to update the state, so we define a setState function that receives an action (for the Counter example this action is the function that increments the state by one).
+> We push that action to a queue we added to the hook.
+> And then we do something similar to what we did in the render function, set a new work in progress root as the next unit of work so the work loop can start a new render phase.
+
+`useState` 同样需要返回一个函数来更新状态，所以我们定义一个 `setState` 函数接收动作（对于 Counter 示例，此动作是将状态加1的函数）。
+我们将该动作推送到添加到 hook 的队列中。
+然后我们执行与在render函数中所做的类似的操作，将新的进行中的工作根设置为下一个工作单元，以便工作循环可以开始新的渲染阶段。
+
+```jsx
+...
+   wipFiber.alternate.hooks[hookIndex]
+  const hook = {
+    state: oldHook ? oldHook.state : initial,
+    queue: [],
+  }
+​
+  const setState = action => {
+    hook.queue.push(action)
+    wipRoot = {
+      dom: currentRoot.dom,
+      props: currentRoot.props,
+      alternate: currentRoot,
+    }
+    nextUnitOfWork = wipRoot
+    deletions = []
+  }
+​
+  wipFiber.hooks.push(hook)
+  hookIndex++
+  return [hook.state, setState]
+}
+```
+
+> But we haven’t run the action yet.
+> We do it the next time we are rendering the component, we get all the actions from the old hook queue, and then apply them one by one to the new hook state, so when we return the state it’s updated.
+
+但是我们还没有执行该操作。
+下次渲染组件时，我们将从旧的 hook 队列中获取所有动作，然后将它们逐一应用于新的 hook 状态，因此当我们返回该状态时，将对其进行更新。
+
+```jsx
+...
+  wipFiber.alternate &&
+    wipFiber.alternate.hooks &&
+    wipFiber.alternate.hooks[hookIndex]
+  const hook = {
+    state: oldHook ? oldHook.state : initial,
+    queue: [],
+  }
+​
+  const actions = oldHook ? oldHook.queue : []
+  actions.forEach(action => {
+    hook.state = action(hook.state)
+  })
+​
+  const setState = action => {
+    hook.queue.push(action)
+    wipRoot = {
+      dom: currentRoot.dom,
+      props: currentRoot.props,
+      alternate: currentRoot,
+    }
+...
+```
+
+> And that’s all. We’ve built our own version of React.
+> You can play with it on codesandbox or github.
+
+这就是所有，我们创建了我们自己版本的 React。
+你可以在 [codesandbox](https://codesandbox.io/s/didact-8-21ost) 或者 [github](https://github.com/pomber/didact) 使用。
+
+```jsx
+function createElement(type, props, ...children) {
+  return {
+    type,
+    props: {
+      ...props,
+      children: children.map(child =>
+        typeof child === "object"
+          ? child
+          : createTextElement(child)
+      ),
+    },
+  }
+}
+​
+function createTextElement(text) {
+  return {
+    type: "TEXT_ELEMENT",
+    props: {
+      nodeValue: text,
+      children: [],
+    },
+  }
+}
+​
+function createDom(fiber) {
+  const dom =
+    fiber.type == "TEXT_ELEMENT"
+      ? document.createTextNode("")
+      : document.createElement(fiber.type)
+​
+  updateDom(dom, {}, fiber.props)
+​
+  return dom
+}
+​
+const isEvent = key => key.startsWith("on")
+const isProperty = key =>
+  key !== "children" && !isEvent(key)
+const isNew = (prev, next) => key =>
+  prev[key] !== next[key]
+const isGone = (prev, next) => key => !(key in next)
+function updateDom(dom, prevProps, nextProps) {
+  //Remove old or changed event listeners
+  Object.keys(prevProps)
+    .filter(isEvent)
+    .filter(
+      key =>
+        !(key in nextProps) ||
+        isNew(prevProps, nextProps)(key)
+    )
+    .forEach(name => {
+      const eventType = name
+        .toLowerCase()
+        .substring(2)
+      dom.removeEventListener(
+        eventType,
+        prevProps[name]
+      )
+    })
+​
+  // Remove old properties
+  Object.keys(prevProps)
+    .filter(isProperty)
+    .filter(isGone(prevProps, nextProps))
+    .forEach(name => {
+      dom[name] = ""
+    })
+​
+  // Set new or changed properties
+  Object.keys(nextProps)
+    .filter(isProperty)
+    .filter(isNew(prevProps, nextProps))
+    .forEach(name => {
+      dom[name] = nextProps[name]
+    })
+​
+  // Add event listeners
+  Object.keys(nextProps)
+    .filter(isEvent)
+    .filter(isNew(prevProps, nextProps))
+    .forEach(name => {
+      const eventType = name
+        .toLowerCase()
+        .substring(2)
+      dom.addEventListener(
+        eventType,
+        nextProps[name]
+      )
+    })
+}
+​
+function commitRoot() {
+  deletions.forEach(commitWork)
+  commitWork(wipRoot.child)
+  currentRoot = wipRoot
+  wipRoot = null
+}
+​
+function commitWork(fiber) {
+  if (!fiber) {
+    return
+  }
+​
+  let domParentFiber = fiber.parent
+  while (!domParentFiber.dom) {
+    domParentFiber = domParentFiber.parent
+  }
+  const domParent = domParentFiber.dom
+​
+  if (
+    fiber.effectTag === "PLACEMENT" &&
+    fiber.dom != null
+  ) {
+    domParent.appendChild(fiber.dom)
+  } else if (
+    fiber.effectTag === "UPDATE" &&
+    fiber.dom != null
+  ) {
+    updateDom(
+      fiber.dom,
+      fiber.alternate.props,
+      fiber.props
+    )
+  } else if (fiber.effectTag === "DELETION") {
+    commitDeletion(fiber, domParent)
+  }
+​
+  commitWork(fiber.child)
+  commitWork(fiber.sibling)
+}
+​
+function commitDeletion(fiber, domParent) {
+  if (fiber.dom) {
+    domParent.removeChild(fiber.dom)
+  } else {
+    commitDeletion(fiber.child, domParent)
+  }
+}
+​
+function render(element, container) {
+  wipRoot = {
+    dom: container,
+    props: {
+      children: [element],
+    },
+    alternate: currentRoot,
+  }
+  deletions = []
+  nextUnitOfWork = wipRoot
+}
+​
+let nextUnitOfWork = null
+let currentRoot = null
+let wipRoot = null
+let deletions = null
+​
+function workLoop(deadline) {
+  let shouldYield = false
+  while (nextUnitOfWork && !shouldYield) {
+    nextUnitOfWork = performUnitOfWork(
+      nextUnitOfWork
+    )
+    shouldYield = deadline.timeRemaining() < 1
+  }
+​
+  if (!nextUnitOfWork && wipRoot) {
+    commitRoot()
+  }
+​
+  requestIdleCallback(workLoop)
+}
+​
+requestIdleCallback(workLoop)
+​
+function performUnitOfWork(fiber) {
+  const isFunctionComponent =
+    fiber.type instanceof Function
+  if (isFunctionComponent) {
+    updateFunctionComponent(fiber)
+  } else {
+    updateHostComponent(fiber)
+  }
+  if (fiber.child) {
+    return fiber.child
+  }
+  let nextFiber = fiber
+  while (nextFiber) {
+    if (nextFiber.sibling) {
+      return nextFiber.sibling
+    }
+    nextFiber = nextFiber.parent
+  }
+}
+​
+let wipFiber = null
+let hookIndex = null
+​
+function updateFunctionComponent(fiber) {
+  wipFiber = fiber
+  hookIndex = 0
+  wipFiber.hooks = []
+  const children = [fiber.type(fiber.props)]
+  reconcileChildren(fiber, children)
+}
+​
+function useState(initial) {
+  const oldHook =
+    wipFiber.alternate &&
+    wipFiber.alternate.hooks &&
+    wipFiber.alternate.hooks[hookIndex]
+  const hook = {
+    state: oldHook ? oldHook.state : initial,
+    queue: [],
+  }
+​
+  const actions = oldHook ? oldHook.queue : []
+  actions.forEach(action => {
+    hook.state = action(hook.state)
+  })
+​
+  const setState = action => {
+    hook.queue.push(action)
+    wipRoot = {
+      dom: currentRoot.dom,
+      props: currentRoot.props,
+      alternate: currentRoot,
+    }
+    nextUnitOfWork = wipRoot
+    deletions = []
+  }
+​
+  wipFiber.hooks.push(hook)
+  hookIndex++
+  return [hook.state, setState]
+}
+​
+function updateHostComponent(fiber) {
+  if (!fiber.dom) {
+    fiber.dom = createDom(fiber)
+  }
+  reconcileChildren(fiber, fiber.props.children)
+}
+​
+function reconcileChildren(wipFiber, elements) {
+  let index = 0
+  let oldFiber =
+    wipFiber.alternate && wipFiber.alternate.child
+  let prevSibling = null
+​
+  while (
+    index < elements.length ||
+    oldFiber != null
+  ) {
+    const element = elements[index]
+    let newFiber = null
+​
+    const sameType =
+      oldFiber &&
+      element &&
+      element.type == oldFiber.type
+​
+    if (sameType) {
+      newFiber = {
+        type: oldFiber.type,
+        props: element.props,
+        dom: oldFiber.dom,
+        parent: wipFiber,
+        alternate: oldFiber,
+        effectTag: "UPDATE",
+      }
+    }
+    if (element && !sameType) {
+      newFiber = {
+        type: element.type,
+        props: element.props,
+        dom: null,
+        parent: wipFiber,
+        alternate: null,
+        effectTag: "PLACEMENT",
+      }
+    }
+    if (oldFiber && !sameType) {
+      oldFiber.effectTag = "DELETION"
+      deletions.push(oldFiber)
+    }
+​
+    if (oldFiber) {
+      oldFiber = oldFiber.sibling
+    }
+​
+    if (index === 0) {
+      wipFiber.child = newFiber
+    } else if (element) {
+      prevSibling.sibling = newFiber
+    }
+​
+    prevSibling = newFiber
+    index++
+  }
+}
+​
+const Didact = {
+  createElement,
+  render,
+  useState,
+}
+​
+/** @jsx Didact.createElement */
+function Counter() {
+  const [state, setState] = Didact.useState(1)
+  return (
+    <h1 onClick={() => setState(c => c + 1)}>
+      Count: {state}
+    </h1>
+  )
+}
+const element = <Counter />
+const container = document.getElementById("root")
+Didact.render(element, container)
+```
+
+## 总结
+
+> Besides helping you understand how React works, one of the goals of this post is to make it easier for you to dive deeper in the React codebase. That’s why we used the same variable and function names almost everywhere.
+> For example, if you add a breakpoint in one of your function components in a real React app, the call stack should show you:
+> - workLoop
+> - performUnitOfWork
+> - updateFunctionComponent
+
+除了帮助你了解 React 的工作原理外，本文的目的之一是使你更轻松地深入React代码库。 这就是为什么我们几乎在所有地方都使用相同的变量和函数名称的原因。
+例如，如果你在真正的React应用程序的功能组件之一中添加断点，则调用堆栈应显示：
+- workLoop
+- performUnitOfWork
+- updateFunctionComponent
+
+> We didn’t include a lot of React features and optimizations. For example, these are a few things that React does differently:
+
+我们没有包括很多 React 功能和优化。 例如，以下是 React 可以做的一些不同的事情：
+
+> - In Didact, we are walking the whole tree during the render phase. React instead follows some hints and heuristics to skip entire sub-trees where nothing changed.
+> - We are also walking the whole tree in the commit phase. React keeps a linked list with just the fibers that have effects and only visit those fibers.
+> - Every time we build a new work in progress tree, we create new objects for each fiber. React recycles the fibers from the previous trees.
+> - When Didact receives a new update during the render phase, it throws away the work in progress tree and starts again from the root. React tags each update with an expiration timestamp and uses it to decide which update has a higher priority.
+> - And many more…
+
+- 在Didact中，我们在渲染阶段遍历整棵树。 相反，React 遵循一些提示和试探法，以跳过没有任何更改的整个子树。
+- 我们还在提交阶段遍历整棵树。 React 仅保留有影响的 fiber 并仅访问那些 fiber 的链表。
+- 每次我们建立一个新的进行中的工作树时，我们都会为每根 fiber 创建新的对象。 React回收了先前树中的 fiber。
+- 当 Didact 在渲染阶段收到新的更新时，它将丢弃进行中的工作树，然后从根开始重新进行。 React 使用过期时间戳标记每个更新，并使用它来决定哪个更新具有更高的优先级。
+- 还有很多…
+
+> There are also a few features that you can add easily:
+> - use an object for the style prop
+> - flatten children arrays
+> - useEffect hook
+> - reconciliation by key
+
+你还可以轻松添加一些功能：
+- 使用对象作为样式道具
+- 展平子数组
+- useEffect hook
+- 通过密钥协调
